@@ -19,7 +19,7 @@ require Exporter;
 
 @ISA    = qw(Exporter);
 @EXPORT_OK = qw(parse drop);
-$VERSION = "1.06";
+$VERSION = "1.07";
 
 use Carp;
 
@@ -462,13 +462,13 @@ sub _onlyVv2 (\@\$)
   $parser .= '  $_[0] =~  /^';
   for my $n (0..$#$value-1)
   {
-    $parser .= $$value[$n] eq '.' ? '\s*.*?(?=\s|$)' : '\s*(.*?)(?=\s|$)';
+    $parser .= $$value[$n] eq '.' ? '\s*\S*' : '\s*(\S*)';
   }
   if (@$value > 1)
   {
     $parser .= '\s*';
   }
-  $parser .= $$value[-1] eq '.' ? '.*?' : '(.*?)';
+  $parser .= $$value[-1] eq '.' ? '.*' : '(.*)';
   $parser .= '$/;' . "\n";
   $parser .= '  ('. join(',',grep { !/^\.$/ } @$value). ') = @list;' ."\n";
   $parser .= '  @list;' . "\n";
@@ -511,7 +511,8 @@ sub _onlyVvPL (\@\$)
         {
           $parser .= '  @tlist = split(q( ),splice(@list,-2,1),'.
             scalar(@tvars).');' . "\n";
-          $parser .= '  push @tlist, ("") x ('.scalar(@tvars).'-@tlist);' . "\n";
+          $parser .= '  push @tlist, ("") x ('.scalar(@tvars).'-@tlist);' . 
+            "\n";
           $parser .= '  splice @list,-1,0,splice(@tlist,0);' . "\n";
         }
         push @vars, splice(@tvars,0);
@@ -575,7 +576,8 @@ sub _onlyVvPL2 (\@\$)
         for my $nv (0..$#tvars-1)
         {
           $patts = join('|','\s',@patts,'$');
-          $re .= '\s*' . (substr($tvars,$nv,1) eq 'v' ? '.*?' : '(.*?)' ) . '(?='.$patts.')';
+          $re .= '\s*' . (substr($tvars,$nv,1) eq 'v' ? '.*?' : '(.*?)' ) . 
+            '(?='.$patts.')';
         }
         $re .= '\s*' if @tvars > 1;
         $re .= substr($tvars,-1,1) eq 'v' ? '.*?' : '(.*?)';
@@ -592,7 +594,8 @@ sub _onlyVvPL2 (\@\$)
     for my $nv (0..$#tvars-1)
     {
       $patts = '\s|$';
-      $re .= '\s*' . (substr($tvars,$nv,1) eq 'v' ? '.*?' : '(.*?)' ) . '(?='.$patts.')';
+      $re .= '\s*' . (substr($tvars,$nv,1) eq 'v' ? '.*?' : '(.*?)' ) . 
+        '(?='.$patts.')';
     }
     $re .= '\s*' if @tvars > 1;
     $re .= substr($tvars,-1,1) eq 'v' ? '.*?' : '(.*?)';
@@ -610,6 +613,73 @@ sub _onlyVvPL2 (\@\$)
   return $parser;
 }
 
+
+
+
+sub _onlyVvPL3 (\@\$)
+{
+  my ($value,$type) = @_;
+  my @vars = ();
+  my @tvars = ();
+  my $tvars = "";
+  my @patts = ();
+  my $patts = "";
+  my $re = "";
+
+  my $parser = "sub\n{\n" ;
+  for my $i (0..$#$value)
+  {
+    push @patts, $$value[$i] if substr($$type,$i,1) =~ /^[LP]$/;
+  }
+  for my $i (0..$#$value)
+  {
+    for (substr($$type,$i,1))
+    {
+      if (/^[Vv]$/)
+      {
+        push @tvars, $$value[$i];
+        push @vars, $$value[$i] if /^[V]$/;
+        $tvars .= substr($$type,$i,1);
+      }
+      else # (/^[PL]$/)
+      {
+        for my $nv (0..$#tvars-1)
+        {
+          $re .= '\s*' . substr($tvars,$nv,1) eq 'v' 
+            ? _Y($patts[0]).'*?' : '('._Y($patts[0]).'*?)'; 
+        }
+        $re .= '\s*' if @tvars > 1;
+        $re .= substr($tvars,-1,1) eq 'v' 
+          ? _K($patts[0]).'*' : '('._K($patts[0]).'*)';
+        $re .= _X($patts[0]);
+        shift @patts;
+        @tvars = ();
+        $tvars = "";
+      }
+    }
+  }
+  if (@tvars) 
+  { 
+    $patts = '$';
+    for my $nv (0..$#tvars-1)
+    {
+      $re .= '\s*' . (substr($tvars,$nv,1) eq 'v' ? '\S*' : '(\S*)' ) ; 
+    }
+    $re .= '\s*' if @tvars > 1;
+    $re .= substr($tvars,-1,1) eq 'v' ? '.*' : '(.*)';
+    @tvars = ();
+    $tvars = "";
+  }
+
+  $parser .= '  my @list = ' ."\n";
+  $parser .= '  $_[0] =~ /^' . $re;
+  $parser .= "\$/;\n";
+  $parser .= '  ('. join(',',@vars). ') = @list;' ."\n";
+  $parser .= '  @list;' . "\n";
+  $parser .= "}\n";
+
+  return $parser;
+}
 
 
 
@@ -662,7 +732,7 @@ sub _parser
     # only variables and patterns (character or variable)
     /^[VvPL]+$/ and do
     {
-      $parser = _onlyVvPL2(@value,$type);
+      $parser = _onlyVvPL3(@value,$type);
       last;
     };
 
@@ -682,7 +752,7 @@ sub _parser
   _debug("$parser\n") if $debug;
 
   my $parseref = eval $parser;
-  if ($@) { croak "$@" }
+  if ($@) { die "$@" }
   return $parseref;
 }
 
@@ -749,6 +819,56 @@ sub new
 }
 
 
+sub _Y
+{
+  my $str = shift;
+  return '@{[_Y('.$str.')]}' if $str =~ /^quotemeta\(.*\)$/;
+  $str =~ s/\\(.)/$1/g;
+  my ($first,$rest) = $str =~ /^(.)(.*)$/;
+  $first = quotemeta($first) if $first =~ /\$|\\/;
+  my $re;
+  if ($rest)
+  {
+    $re = '(?:[^' . $first . '\s]|\S(?!' . quotemeta($rest) . '))';
+  }
+  else
+  {
+    $re = '[^' . $first . '\s]';
+  }
+  $re;
+}
+
+sub _K
+{
+  my $str = shift;
+  return '@{[_K('.$str.')]}' if $str =~ /^quotemeta\(.*\)$/;
+  $str =~ s/\\(.)/$1/g;
+  my ($first,$rest) = $str =~ /^(.)(.*)$/;
+  $first = quotemeta($first) if $first =~ /\$|\\/;
+  my $re;
+  if ($rest)
+  {
+    $re = '(?:[^' . $first . ']|.(?!' . quotemeta($rest) . '))';
+  }
+  else
+  {
+    $re = '[^' . $first . ']' ;
+  }
+  $re;
+}
+
+sub _X
+{
+  my $str = shift;
+  return '@{[_X('.$str.')]}' if $str =~ /^quotemeta\(.*\)$/;
+  $str =~ s/\\(.)/$1/g;
+  my ($first,$rest) = $str =~ /^(.)(.*)$/;
+  $first = quotemeta($first) if $first =~ /\$|\\/;
+  my $re;
+  $re = '(?:'. quotemeta($str) . ')?';
+  $re;
+}
+
 
 1;
 
@@ -762,7 +882,7 @@ String::RexxParse - Perl implementation of REXX parse command
 
 Download: 
 
-http://www.danofsteel.com/Parser/String-RexxParse-1.06.tar.gz
+http://www.danofsteel.com/Parser/String-RexxParse-1.07.tar.gz
 
 
 =head1 AUTHOR
@@ -773,7 +893,7 @@ Dan Campbell
 
 =item Copyright
 
-Copyright (c) 1999 Dan Campbell. All rights reserved.
+Copyright (c) 1999, 2000 Dan Campbell. All rights reserved.
 This program is free software; you can redistribute it and/or modify it
 under the same terms as Perl itself.
 
@@ -790,6 +910,15 @@ statements.
 =head1 CHANGES
 
 =over 4
+
+=item Version 1.07
+
+Additional internal optimizations for the following templates special cases:
+
+  Template only contains variables (or . )
+  Template only contains variables (or . ) or patterns (literal or variable)
+
+=for html <br><br><br>
 
 =item Version 1.06
 
