@@ -2,6 +2,7 @@
 use vars qw($eight $a $b $c $d $e $f $g %qq $i $template);
 use String::RexxParse qw(parse);
 
+
 $a = '  123 434 546.434 ([dsdsdsd])  2343 abcdefghijklmnop';
 
 $b = "b";
@@ -29,14 +30,12 @@ for (0..1)
   { print "ok $i\n" } else { print "not ok $i\n" } $i++;
   
   parse $a, $template = q!$b . $d $e . $f $g $qq{one}!;
-
   if
   (
     $b eq '123' and $d eq '546.434' and $e eq '([dsdsdsd])' and $f eq 'abcdefghijklmnop'
-    and !defined($g) and !defined($qq{one})
+    and $g eq '' and $qq{one} eq ''
   )
   { print "ok $i\n" } else { print "not ok $i\n" } $i++;
-
 
   parse $a, $template = q!$b 4 $d 8  $e -2 $f 9 $g -7 $qq{one}!;
   if
@@ -55,12 +54,11 @@ for (0..1)
   )
   { print "ok $i\n" } else { print "not ok $i\n" } $i++;
 
-  
   parse $a, $template = q!. $b $d $e . $f $g $qq{one}!;
   if
   (
     $b eq '434' and $d eq '546.434' and $e eq '([dsdsdsd])' and $f eq 'abcdefghijklmnop'
-    and !defined($g) and !defined($qq{one})
+    and $g eq '' and $qq{one} eq ''
   )
   { print "ok $i\n" } else { print "not ok $i\n" } $i++;
 
@@ -68,7 +66,7 @@ for (0..1)
   if
   (
     $b eq '123' and $d eq '434' and $e eq '546.434' and $f eq '2343'
-    and $g eq 'abcdefghijklmnop' and !defined($qq{one})
+    and $g eq 'abcdefghijklmnop' and $qq{one} eq ''
   ) 
   { print "ok $i\n" } else { print "not ok $i\n" } $i++;
 
@@ -81,4 +79,3 @@ for (0..1)
   { print "ok $i\n" } else { print "not ok $i\n" } $i++;
 
 }
-

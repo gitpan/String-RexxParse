@@ -1,7 +1,9 @@
 
 String::RexxParse Module
 
-Copyright (c) 1999 Dan Campbell <parser@danofsteel.com>. All rights reserved.
+Copyright (c) 1999, 2000 Dan Campbell (String::RexxParse->email)
+All rights reserved.
+
 This program is free software; you can redistribute it and/or
 modify it under the same terms as Perl itself.
 
@@ -12,7 +14,7 @@ my attempt to provide such parsing in Perl.  The documentation assumes
 a familiarity with REXX parse statements.
 
 
-I tested this module on OS/2, Linux (RedHat 5.2), AIX, and OS/390.  It
+I tested this module on OS/2, Linux (RedHat 6.1), AIX, and OS/390.  It
 should work exactly the same on any platform.
 
 Revision history for Perl extension String::RexxParse:
@@ -40,6 +42,16 @@ Revision history for Perl extension String::RexxParse:
 1.05  Tue Oct 19 1999
       - Minor doc changes.
 
+1.06  Sun Mar 26 2000
+      - Internal optimizations for the following type of templates:
+        - template is only a single lvalue
+        - template is only lvalues and '.' place holders
+        - template is only patterns, lvalues, and '.' place holders
+      - Removed my email address to avoid spam.  My email address
+        will be returned by calling String::RexxParse->email from 
+        a perl program that uses String::RexxParse.
+      - Minor doc changes.
+
 
 Latest Version:
 ---------------
@@ -47,10 +59,10 @@ Latest Version:
 The latest version of String::RexxParse in .tar.gz format can
 be obtained from:
 
-       http://www.cpan.org/String/BLCKSMTH 
+       http://www.cpan.org/modules/by-module/String/BLCKSMTH 
 
-The latest version of String::RexxParse in .tar.gz, .tar.Z, 
-and .zip formats can be obtained from:
+The latest version of String::RexxParse in .tar.gz format can 
+be obtained from:
 
        http://www.danofsteel.com/Parser 
 
@@ -59,47 +71,11 @@ Installation:
 -------------
 
 
-  Linux, UNIX, etc.:
-  ------------------
-
-  tar -xzf String-RexxParse-1.05.tar.gz
+  tar -xzf String-RexxParse-1.06.tar.gz
 
   perl Makefile.PL
   make
   make test
   make install
-
-
-  AIX:
-  ----
-
-  zcat String-RexxParse-1.05.tar.Z | tar -xzf -
-
-  perl Makefile.PL
-  make
-  make test
-  make install
-
-
-  OS/390:
-  -------
-
-  pax -z -o from=ISO8859-1,to=IBM-1047 -rf String-RexxParse-1.05.tar.Z
-
-  perl Makefile.PL
-  make
-  make test
-  make install
-
-
-  OS/2,  Windows, etc.:
-  ---------------------
-
-  unzip String-RexxParse-1.05.zip
-
-  Put the file 'RexxParse.pm' in one of your Perl lib directories, or use
-  one of the many ways to get Perl programs to find modules.  I've read
-  that it's possible use the 'UNIX' method above to install modules on
-  OS/2 or Windows, but I've never done it.
 
 

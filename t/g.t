@@ -1,11 +1,11 @@
 
 use String::RexxParse;
 
+
 my $z = String::RexxParse->new( q~ '$' $x '{' $x '}{' $x '...' $x '}' ~ );
 my ($h,$p,$a,$j) = $z->parse('$hacker{perl}{another...just}');
 
 print "1..4\n";
-
 
 if ($j eq 'just' ) { print "ok 1\n" }
 else { print "not ok 1\n" }

@@ -1,11 +1,12 @@
 # String::RexxParse.pm
 #
-# Copyright (c) 1999 Dan Campbell <parser@danofsteel.com>. All rights reserved.
+# Copyright (c) 1999, 2000 Dan Campbell (String::RexxParse->email).
+# All rights reserved.
+#
 # This program is free software; you can redistribute it and/or
 # modify it under the same terms as Perl itself.
 #
 # This module is intended to provide REXX-like parsing in Perl.
-# Consider it BETA level code.
 #
 # Documentation at http://www.danofsteel.com/Parser
 
@@ -18,12 +19,11 @@ require Exporter;
 
 @ISA    = qw(Exporter);
 @EXPORT_OK = qw(parse drop);
-$VERSION = "1.05";
+$VERSION = "1.06";
 
 use Carp;
 
 require 5.003; # 5.003 is required to support subroutine prototypes.
-
 
 
 sub _packagize
@@ -41,6 +41,7 @@ sub _packagize
 
 sub max { $_[0] >= $_[1] ? $_[0] : $_[1] }
 sub min { $_[0] <= $_[1] ? $_[0] : $_[1] }
+sub email { reverse 'moc.leetsfonad' . '@' . 'esrapxxer' }
 
 
 
@@ -451,6 +452,29 @@ sub _onlyVv (\@\$)
 
 
 
+sub _onlyVv2 (\@\$)
+{
+  my $value = shift;
+  my $type = shift;
+
+  my $parser = "sub\n{\n" ;
+  $parser .= '  my @list = ' ."\n";
+  $parser .= '  $_[0] =~  /^';
+  for my $n (0..$#$value-1)
+  {
+    $parser .= $$value[$n] eq '.' ? '\s*.*?(?=\s|$)' : '\s*(.*?)(?=\s|$)';
+  }
+  if (@$value > 1)
+  {
+    $parser .= '\s*';
+  }
+  $parser .= $$value[-1] eq '.' ? '.*?' : '(.*?)';
+  $parser .= '$/;' . "\n";
+  $parser .= '  ('. join(',',grep { !/^\.$/ } @$value). ') = @list;' ."\n";
+  $parser .= '  @list;' . "\n";
+  $parser .= "}\n";
+  return $parser;
+}
 
 
 
@@ -519,6 +543,75 @@ sub _onlyVvPL (\@\$)
 
 
 
+sub _onlyVvPL2 (\@\$)
+{
+  my ($value,$type) = @_;
+  my @vars = ();
+  my @tvars = ();
+  my $tvars = "";
+  my @patts = ();
+  my $patts = "";
+  my $re = "";
+
+  my $parser = "sub\n{\n" ;
+  for my $i (0..$#$value)
+  {
+    push @patts, $$value[$i] if substr($$type,$i,1) =~ /^[L]$/;
+    push @patts, '@{'.$$value[$i].'}' if substr($$type,$i,1) =~ /^[P]$/;
+  }
+  for my $i (0..$#$value)
+  {
+    for (substr($$type,$i,1))
+    {
+      if (/^[Vv]$/)
+      {
+        push @tvars, $$value[$i];
+        push @vars, $$value[$i] if /^[V]$/;
+        $tvars .= substr($$type,$i,1);
+      }
+      else # (/^[PL]$/)
+      {
+        $patts = join('|',@patts,'$');
+        for my $nv (0..$#tvars-1)
+        {
+          $patts = join('|','\s',@patts,'$');
+          $re .= '\s*' . (substr($tvars,$nv,1) eq 'v' ? '.*?' : '(.*?)' ) . '(?='.$patts.')';
+        }
+        $re .= '\s*' if @tvars > 1;
+        $re .= substr($tvars,-1,1) eq 'v' ? '.*?' : '(.*?)';
+        $re .= '(?='.$patts.')(?:'.$patts[0].')?';
+        shift @patts;
+        @tvars = ();
+        $tvars = "";
+      }
+    }
+  }
+  if (@tvars) 
+  { 
+    $patts = '$';
+    for my $nv (0..$#tvars-1)
+    {
+      $patts = '\s|$';
+      $re .= '\s*' . (substr($tvars,$nv,1) eq 'v' ? '.*?' : '(.*?)' ) . '(?='.$patts.')';
+    }
+    $re .= '\s*' if @tvars > 1;
+    $re .= substr($tvars,-1,1) eq 'v' ? '.*?' : '(.*?)';
+    @tvars = ();
+    $tvars = "";
+  }
+
+  $parser .= '  my @list = ' ."\n";
+  $parser .= '  $_[0] =~ /^' . $re;
+  $parser .= "\$/;\n";
+  $parser .= '  ('. join(',',@vars). ') = @list;' ."\n";
+  $parser .= '  @list;' . "\n";
+  $parser .= "}\n";
+
+  return $parser;
+}
+
+
+
 
 
 
@@ -547,15 +640,15 @@ sub _parser
     # only one variable to assign data
     /^[V]$/ and do
     {
-      $parser = "sub\n{\n  my \$source = shift;\n  " . $value[0] . 
-        " = \$source;\n  \$source;\n};\n";
+      $parser = "sub\n{\n  " . $value[0] . 
+        ' = $_[0];' . "\n};\n";
       last;
     };
 
     # only variables and placeholders
     /^[Vv]+$/ and do
     {
-      $parser = _onlyVv(@value,$type);
+      $parser = _onlyVv2(@value,$type);
       last;
     };
     
@@ -569,7 +662,7 @@ sub _parser
     # only variables and patterns (character or variable)
     /^[VvPL]+$/ and do
     {
-      $parser = _onlyVvPL(@value,$type);
+      $parser = _onlyVvPL2(@value,$type);
       last;
     };
 
@@ -597,7 +690,7 @@ sub _parser
 sub _debug
 {
   my @list = @_;
-  open(DEBUG,">>".__PACKAGE__.".debug");
+  open(DEBUG,">>Parser.debug");
   for my $item (@list) 
   { 
     print DEBUG "$item";
@@ -669,16 +762,12 @@ String::RexxParse - Perl implementation of REXX parse command
 
 Download: 
 
-http://www.danofsteel.com/Parser/String-RexxParse-1.05.tar.gz
-
-http://www.danofsteel.com/Parser/String-RexxParse-1.05.tar.Z
-
-http://www.danofsteel.com/Parser/String-RexxParse-1.05.zip
+http://www.danofsteel.com/Parser/String-RexxParse-1.06.tar.gz
 
 
 =head1 AUTHOR
 
-Dan Campbell <parser@danofsteel.com>
+Dan Campbell
 
 =over 0
 
@@ -701,6 +790,20 @@ statements.
 =head1 CHANGES
 
 =over 4
+
+=item Version 1.06
+
+Removed email address that only gets spam.
+
+Added String::RexxParse->email which returns me email address.
+
+Internal optimizations for the following templates special cases:
+
+  Template is only a single lvalue
+  Template only contains variables (or . )
+  Template only contains variables (or . ) or patterns (literal or variable)
+
+=for html <br><br><br>
 
 =item Version 1.05
 
@@ -930,7 +1033,7 @@ object like so: $parse->parse(EXPR);
 
 =head1 BUGS, QUESTIONS, COMMENTS
 
-Please report any suspected bugs to Dan Campbell <parser@danofsteel.com>.  
+Please report any suspected bugs to Dan Campbell (String::RexxParse->email).  
 Include the template and sample text that produces the incorrect results, 
 along with a description of the problem.  Questions and comments are also 
 welcome.
