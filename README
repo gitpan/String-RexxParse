@@ -57,6 +57,10 @@ Revision history for Perl extension String::RexxParse:
         - template is only lvalues and '.' place holders
         - template is only patterns, lvalues, and '.' place holders
 
+1.08  Thu May 18 2000
+      - fixed bug introduced in 1.07
+      - added j.t to test suite
+
 Latest Version:
 ---------------
 
@@ -75,7 +79,7 @@ Installation:
 -------------
 
 
-  tar -xzf String-RexxParse-1.06.tar.gz
+  tar -xzf String-RexxParse-1.08.tar.gz
 
   perl Makefile.PL
   make

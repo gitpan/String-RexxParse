@@ -19,7 +19,7 @@ require Exporter;
 
 @ISA    = qw(Exporter);
 @EXPORT_OK = qw(parse drop);
-$VERSION = "1.07";
+$VERSION = "1.08";
 
 use Carp;
 
@@ -645,8 +645,9 @@ sub _onlyVvPL3 (\@\$)
       {
         for my $nv (0..$#tvars-1)
         {
-          $re .= '\s*' . substr($tvars,$nv,1) eq 'v' 
-            ? _Y($patts[0]).'*?' : '('._Y($patts[0]).'*?)'; 
+          $re .= '\s*';
+          $re .= substr($tvars,$nv,1) eq 'v' 
+            ? _Y($patts[0]).'*' : '('._Y($patts[0]).'*)'; 
         }
         $re .= '\s*' if @tvars > 1;
         $re .= substr($tvars,-1,1) eq 'v' 
@@ -663,7 +664,8 @@ sub _onlyVvPL3 (\@\$)
     $patts = '$';
     for my $nv (0..$#tvars-1)
     {
-      $re .= '\s*' . (substr($tvars,$nv,1) eq 'v' ? '\S*' : '(\S*)' ) ; 
+      $re .= '\s*';
+      $re .= (substr($tvars,$nv,1) eq 'v' ? '\S*' : '(\S*)' ) ; 
     }
     $re .= '\s*' if @tvars > 1;
     $re .= substr($tvars,-1,1) eq 'v' ? '.*' : '(.*)';
@@ -911,16 +913,26 @@ statements.
 
 =over 4
 
+=item Version 1.08
+
+=for html <br>
+
+Fixed bug introduced in 1.07 and added j.t to test suite.
+
 =item Version 1.07
+
+=for html <br>
 
 Additional internal optimizations for the following templates special cases:
 
   Template only contains variables (or . )
   Template only contains variables (or . ) or patterns (literal or variable)
 
-=for html <br><br><br>
+=for html <br>
 
 =item Version 1.06
+
+=for html <br>
 
 Removed email address that only gets spam.
 
@@ -932,47 +944,55 @@ Internal optimizations for the following templates special cases:
   Template only contains variables (or . )
   Template only contains variables (or . ) or patterns (literal or variable)
 
-=for html <br><br><br>
+=for html <br>
 
 =item Version 1.05
 
+=for html <br>
 
 Minor doc changes (README, mostly).
 
-=for html <br><br><br>
+=for html <br>
 
 =item Version 1.04
 
+=for html <br>
 
 Changed name String::Parser to String::RexxParse.
 
-=for html <br><br><br>
+=for html <br>
 
 =item Version 1.03
 
+=for html <br>
 
 Fixed incorrect handling of template when two or more
 patterns are next to each other, or when last template
 item is a pattern.
 
-=for html <br><br><br>
+=for html <br>
 
 =item Version 1.02
- 
+
+=for html <br>
 
 Fixed incorrect handling of variable pattern in template when
 variable's value contains regex meta characters.
 
-=for html <br><br><br>
+=for html <br>
 
 =item Version 1.01
+
+=for html <br>
 
 Fixed incorrect template parsing when a pattern is the first
 template item.
 
-=for html <br><br><br>
+=for html <br>
 
 =item Version 1.00
+
+=for html <br>
 
 Consider this the starting point.  Any previous version should be replaced.
 
