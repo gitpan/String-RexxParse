@@ -15,6 +15,45 @@ a familiarity with REXX parse statements.
 I tested this module on OS/2, Linux (RedHat 5.2), AIX, and OS/390.  It
 should work exactly the same on any platform.
 
+Revision history for Perl extension String::RexxParse:
+------------------------------------------------------
+
+1.00  Sat Aug 27 1999
+      - original version; 
+
+1.01  Sat Sep 4 1999
+      - Fixed incorrect template parsing when a pattern is the 
+        first template item. 
+
+1.02  Sat Sep 4 1999
+      - Fixed incorrect handling of variable pattern in template 
+        when variable's value contains regex meta characters. 
+
+1.03  Sat Sep 6 1999
+      - Fixed incorrect handling of template when two or more
+        patterns are next to each other, or when last template
+        item is a pattern.
+
+1.04  Fri Oct 1 1999
+      - Changed module name from String::Parser to String::RexxParse.
+
+1.05  Tue Oct 19 1999
+      - Minor doc changes.
+
+
+Latest Version:
+---------------
+
+The latest version of String::RexxParse in .tar.gz format can
+be obtained from:
+
+       http://www.cpan.org/String/BLCKSMTH 
+
+The latest version of String::RexxParse in .tar.gz, .tar.Z, 
+and .zip formats can be obtained from:
+
+       http://www.danofsteel.com/Parser 
+
 
 Installation:
 -------------
@@ -23,7 +62,7 @@ Installation:
   Linux, UNIX, etc.:
   ------------------
 
-  tar -xzf String-RexxParse-1.04.tar.gz
+  tar -xzf String-RexxParse-1.05.tar.gz
 
   perl Makefile.PL
   make
@@ -34,7 +73,7 @@ Installation:
   AIX:
   ----
 
-  zcat String-RexxParse-1.04.tar.Z | tar -xzf -
+  zcat String-RexxParse-1.05.tar.Z | tar -xzf -
 
   perl Makefile.PL
   make
@@ -45,7 +84,7 @@ Installation:
   OS/390:
   -------
 
-  pax -z -o from=ISO8859-1,to=IBM-1047 -rf String-RexxParse-1.04.tar.Z
+  pax -z -o from=ISO8859-1,to=IBM-1047 -rf String-RexxParse-1.05.tar.Z
 
   perl Makefile.PL
   make
@@ -56,7 +95,7 @@ Installation:
   OS/2,  Windows, etc.:
   ---------------------
 
-  unzip String-RexxParse-1.04.zip
+  unzip String-RexxParse-1.05.zip
 
   Put the file 'RexxParse.pm' in one of your Perl lib directories, or use
   one of the many ways to get Perl programs to find modules.  I've read

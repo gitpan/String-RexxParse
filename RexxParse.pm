@@ -18,7 +18,7 @@ require Exporter;
 
 @ISA    = qw(Exporter);
 @EXPORT_OK = qw(parse drop);
-$VERSION = "1.04";
+$VERSION = "1.05";
 
 use Carp;
 
@@ -669,11 +669,11 @@ String::RexxParse - Perl implementation of REXX parse command
 
 Download: 
 
-http://www.webaccess.net/~blcksmth/Parser/String-RexxParse-1.04.tar.gz
+http://www.danofsteel.com/Parser/String-RexxParse-1.05.tar.gz
 
-http://www.webaccess.net/~blcksmth/Parser/String-RexxParse-1.04.tar.Z
+http://www.danofsteel.com/Parser/String-RexxParse-1.05.tar.Z
 
-http://www.webaccess.net/~blcksmth/Parser/String-RexxParse-1.04.zip
+http://www.danofsteel.com/Parser/String-RexxParse-1.05.zip
 
 
 =head1 AUTHOR
@@ -702,7 +702,15 @@ statements.
 
 =over 4
 
+=item Version 1.05
+
+
+Minor doc changes (README, mostly).
+
+=for html <br><br><br>
+
 =item Version 1.04
+
 
 Changed name String::Parser to String::RexxParse.
 
