@@ -1,7 +1,7 @@
 
 String::RexxParse Module
 
-Copyright (c) 1999, 2000 Dan Campbell (String::RexxParse->email)
+Copyright (c) 1999, 2000, 2001, 2002 Dan Campbell (String::RexxParse->email)
 All rights reserved.
 
 This program is free software; you can redistribute it and/or
@@ -61,6 +61,16 @@ Revision history for Perl extension String::RexxParse:
       - fixed bug introduced in 1.07
       - added j.t to test suite
 
+1.09  Thu Jul 7 2000
+      - general cleanup
+      - no functional changes
+
+1.10  Fri Mar 8 2002
+      - Put eval around processing of numeric patterns in order to set $@
+        in calling module when there is an error.
+      - Added protection against errors for numeric patterns when string
+        to be parsed is shorter than the pattern calls for.
+
 Latest Version:
 ---------------
 
@@ -79,7 +89,7 @@ Installation:
 -------------
 
 
-  tar -xzf String-RexxParse-1.08.tar.gz
+  tar -xzf String-RexxParse-1.10.tar.gz
 
   perl Makefile.PL
   make

@@ -1,6 +1,6 @@
 # String::RexxParse.pm
 #
-# Copyright (c) 1999, 2000 Dan Campbell (String::RexxParse->email).
+# Copyright (c) 1999, 2000, 2001, 2002 Dan Campbell (String::RexxParse->email).
 # All rights reserved.
 #
 # This program is free software; you can redistribute it and/or
@@ -19,7 +19,7 @@ require Exporter;
 
 @ISA    = qw(Exporter);
 @EXPORT_OK = qw(parse drop);
-$VERSION = "1.08";
+$VERSION = "1.10";
 
 use Carp;
 
@@ -181,7 +181,7 @@ TOK
 
 
 
-sub _onlyVvRN (\@\$)
+sub _VvRN (\@\$)
 {
   my ($value,$type) = @_;
   my $utemplate = "";
@@ -190,9 +190,10 @@ sub _onlyVvRN (\@\$)
   my $next = 0;
   my @vars = ();
   my @tvars = ();
+  my $max = 0;
+  my $cur = 0;
 
-  my $parser = "sub\n{\n  my \$source = shift;\n  my \@tlist = ();\n" .
-    "  my \@list = ";
+  my $parser = "sub\n{\n  my \@list = ();\n  eval\n  {\n    my \$source = shift;\n    my \@tlist = ();\n" .  "    \@list = ";
   for my $i (0..$#$value)
   {
     for (substr($$type,$i,1))
@@ -205,10 +206,10 @@ sub _onlyVvRN (\@\$)
       {
         if (@tvars > 1)
         {
-          $tmp .= '  @tlist = split(q( ),splice(@list,'.$next.',1),' . 
+          $tmp .= '    @tlist = split(q( ),splice(@list,'.$next.',1),' . 
             scalar(@tvars) . ');'."\n";
-          $tmp .= '  push @tlist, ("") x ('.scalar(@tvars).'-@tlist);' ."\n";
-          $tmp .= '  splice @list,'.$next.',0,splice(@tlist,0);' . "\n";
+          $tmp .= '    push @tlist, ("") x ('.scalar(@tvars).'-@tlist);' ."\n";
+          $tmp .= '    splice @list,'.$next.',0,splice(@tlist,0);' . "\n";
           $next += $#tvars;
         }
         push @vars, @tvars;
@@ -232,15 +233,17 @@ sub _onlyVvRN (\@\$)
             $next++;
           }
         }
+        $cur += eval $$value[$i];
+        $max= $cur if $cur > $max;
       }
       elsif (/^N$/)
       {
         if (@tvars > 1)
         {
-          $tmp .= '  @tlist = split(q( ),splice(@list,'.$next.',1),' . 
+          $tmp .= '    @tlist = split(q( ),splice(@list,'.$next.',1),' . 
              scalar(@tvars) . ');'."\n";
-          $tmp .= '  push @tlist, ("") x ('.scalar(@tvars).'-@tlist);' ."\n";
-          $tmp .= '  splice @list,'.$next.',0,splice(@tlist,0);' . "\n";
+          $tmp .= '    push @tlist, ("") x ('.scalar(@tvars).'-@tlist);' ."\n";
+          $tmp .= '    splice @list,'.$next.',0,splice(@tlist,0);' . "\n";
           $next += $#tvars;
         }
         push @vars, @tvars;
@@ -264,6 +267,8 @@ sub _onlyVvRN (\@\$)
             $next++;
           }
         }
+        $cur = eval $$value[$i];
+        $max = $cur if $cur > $max;
       }
     }
   }
@@ -272,18 +277,20 @@ sub _onlyVvRN (\@\$)
     $utemplate .= 'a*'; 
     push @vars,splice(@tvars,0); 
   }
-  $parser .= 'unpack("' . $utemplate . '",$source);' . "\n" . $tmp;
+  $parser .= 'unpack("' . $utemplate . '",sprintf("%-'.$max.'s",$source));'
+     . "\n" . $tmp;
   for my $n (0..$#vars)
   {
     if (defined($vars[$n]) and $vars[$n] eq '.')
     {
-      $parser .= '  splice @list,' . $n . ',1;' . "\n";
+      $parser .= '    splice @list,' . $n . ',1;' . "\n";
       splice @vars,$n,1;
       redo;
     }
   }
-  $parser .= '  (' . join(',',@vars) . ') = @list;' . "\n";
-  $parser .= "  \@list;\n}\n";
+  $parser .= '    (' . join(',',@vars) . ') = @list;' . "\n";
+  $parser .= "  };\n  croak \"String too short for pattern\" if \$@ =~ /x outside/;\n  croak \"\$@\" if \$@;\n  \@list;\n}\n";
+  $parser .= "#MAX: $max\n";
 
   return $parser;
 }
@@ -427,32 +434,7 @@ sub _anything (\@\$)
 
 
 
-sub _onlyVv (\@\$)
-{
-  my $value = shift;
-  my $type = shift;
-
-  my $parser = "sub\n{\n  my \$source = shift;\n" .
-    "  my \@list = split(q( ),\$source,".scalar(@$value).");\n";
-  for my $n (0..$#$value)
-  {
-    if (defined($$value[$n]) and $$value[$n] eq '.')
-    {
-      substr($$type,$n,1) = '';
-      splice @$value,$n,1;
-      $parser .= '  splice @list,' . $n . ',1;' . "\n";
-      redo;
-    }
-  }
-  $parser .= '  ('. join(',',@$value). ') = @list;' . "\n";
-  $parser .= "  \@list;\n}\n";
-  return $parser;
-}
-
-
-
-
-sub _onlyVv2 (\@\$)
+sub _Vv (\@\$)
 {
   my $value = shift;
   my $type = shift;
@@ -479,144 +461,11 @@ sub _onlyVv2 (\@\$)
 
 
 
-sub _onlyVvPL (\@\$)
-{
-  my ($value,$type) = @_;
-  my @vars = ();
-  my @tvars = ();
-
-  my $parser = "sub\n{\n  my \$source = shift;\n  my \@tlist = ();\n" .
-    "  my \@list = (\$source);\n";
-  for my $i (0..$#$value)
-  {
-    for (substr($$type,$i,1))
-    {
-      if (/^[Vv]$/)
-      {
-        push @tvars, $$value[$i];
-      }
-      else # (/^[PL]$/)
-      {
-        if (/^L$/)
-        {
-          $parser .= q~  @tlist = split('~.$$value[$i].q~',pop @list,2);~."\n";
-        }
-        else
-        {
-          $parser .= '  @tlist = split('.$$value[$i].',pop @list,2);'."\n";
-        }
-        $parser .= '  push @tlist, ("") x (2-@tlist);' . "\n";
-        $parser .= '  push @list, splice(@tlist,0);' ."\n";
-        if (@tvars > 1)
-        {
-          $parser .= '  @tlist = split(q( ),splice(@list,-2,1),'.
-            scalar(@tvars).');' . "\n";
-          $parser .= '  push @tlist, ("") x ('.scalar(@tvars).'-@tlist);' . 
-            "\n";
-          $parser .= '  splice @list,-1,0,splice(@tlist,0);' . "\n";
-        }
-        push @vars, splice(@tvars,0);
-      }
-    }
-  }
-  if (@tvars > 1) 
-  { 
-    $parser .= '  @tlist = split(q( ), pop @list,'.scalar(@tvars).');' . "\n";
-    $parser .= '  push @tlist, ("") x ('.scalar(@tvars).'-@tlist);' . "\n";
-    $parser .= '  push @list, splice(@tlist,0);' . "\n";
-  }
-  push @vars, splice(@tvars,0);
-
-  for my $n (0..$#vars)
-  {
-    if (defined($vars[$n]) and $vars[$n] eq '.')
-    {
-      $parser .= '  splice @list,' . $n . ',1;' . "\n";
-      splice @vars,$n,1;
-      redo;
-    }
-  }
-  $parser .= '  (' . join(',',@vars) . ') = @list;' . "\n";
-  $parser .= "  \@list;\n}\n";
-
-  return $parser;
-}
-
-
-
-sub _onlyVvPL2 (\@\$)
-{
-  my ($value,$type) = @_;
-  my @vars = ();
-  my @tvars = ();
-  my $tvars = "";
-  my @patts = ();
-  my $patts = "";
-  my $re = "";
-
-  my $parser = "sub\n{\n" ;
-  for my $i (0..$#$value)
-  {
-    push @patts, $$value[$i] if substr($$type,$i,1) =~ /^[L]$/;
-    push @patts, '@{'.$$value[$i].'}' if substr($$type,$i,1) =~ /^[P]$/;
-  }
-  for my $i (0..$#$value)
-  {
-    for (substr($$type,$i,1))
-    {
-      if (/^[Vv]$/)
-      {
-        push @tvars, $$value[$i];
-        push @vars, $$value[$i] if /^[V]$/;
-        $tvars .= substr($$type,$i,1);
-      }
-      else # (/^[PL]$/)
-      {
-        $patts = join('|',@patts,'$');
-        for my $nv (0..$#tvars-1)
-        {
-          $patts = join('|','\s',@patts,'$');
-          $re .= '\s*' . (substr($tvars,$nv,1) eq 'v' ? '.*?' : '(.*?)' ) . 
-            '(?='.$patts.')';
-        }
-        $re .= '\s*' if @tvars > 1;
-        $re .= substr($tvars,-1,1) eq 'v' ? '.*?' : '(.*?)';
-        $re .= '(?='.$patts.')(?:'.$patts[0].')?';
-        shift @patts;
-        @tvars = ();
-        $tvars = "";
-      }
-    }
-  }
-  if (@tvars) 
-  { 
-    $patts = '$';
-    for my $nv (0..$#tvars-1)
-    {
-      $patts = '\s|$';
-      $re .= '\s*' . (substr($tvars,$nv,1) eq 'v' ? '.*?' : '(.*?)' ) . 
-        '(?='.$patts.')';
-    }
-    $re .= '\s*' if @tvars > 1;
-    $re .= substr($tvars,-1,1) eq 'v' ? '.*?' : '(.*?)';
-    @tvars = ();
-    $tvars = "";
-  }
-
-  $parser .= '  my @list = ' ."\n";
-  $parser .= '  $_[0] =~ /^' . $re;
-  $parser .= "\$/;\n";
-  $parser .= '  ('. join(',',@vars). ') = @list;' ."\n";
-  $parser .= '  @list;' . "\n";
-  $parser .= "}\n";
-
-  return $parser;
-}
 
 
 
 
-sub _onlyVvPL3 (\@\$)
+sub _VvPL (\@\$)
 {
   my ($value,$type) = @_;
   my @vars = ();
@@ -720,21 +569,21 @@ sub _parser
     # only variables and placeholders
     /^[Vv]+$/ and do
     {
-      $parser = _onlyVv2(@value,$type);
+      $parser = _Vv(@value,$type);
       last;
     };
     
     # only variables and hard-coded numeric patterns
     /^[VvRN]+$/ and do
     {
-      $parser = _onlyVvRN(@value,$type);
+      $parser = _VvRN(@value,$type);
       last;
     };
 
     # only variables and patterns (character or variable)
     /^[VvPL]+$/ and do
     {
-      $parser = _onlyVvPL3(@value,$type);
+      $parser = _VvPL(@value,$type);
       last;
     };
 
@@ -884,7 +733,9 @@ String::RexxParse - Perl implementation of REXX parse command
 
 Download: 
 
-http://www.danofsteel.com/Parser/String-RexxParse-1.07.tar.gz
+http://www.danofsteel.com/Parser/String-RexxParse-1.10.tar.gz
+
+ftp://www.danofsteel.com/pub/RexxParse/String-RexxParse-1.10.tar.gz
 
 
 =head1 AUTHOR
@@ -905,19 +756,41 @@ under the same terms as Perl itself.
 
 Some long-time REXX programmers switching to Perl find it difficult 
 to give up REXX's template-based parsing abilities.  This module is 
-my attempt to provide such parsing in Perl.  Consider it BETA 
-level code.  The documentation assumes a familiarity with REXX parse
+my attempt to provide such parsing in Perl.  
+The documentation assumes a familiarity with REXX parse
 statements.
 
 =head1 CHANGES
 
 =over 4
 
+=item Version 1.10
+
+=for html <br>
+
+Put eval around processing of numeric patterns in order to set $@
+in calling module when there is an error.
+
+Added protection against errors for numeric patterns when string
+to be parsed is shorter than the pattern calls for.
+
+=for html <br><br>
+
+=item Version 1.09
+
+=for html <br>
+ 
+General cleanup.  No functional changes.
+
+=for html <br><br>
+
 =item Version 1.08
 
 =for html <br>
 
 Fixed bug introduced in 1.07 and added j.t to test suite.
+
+=for html <br><br>
 
 =item Version 1.07
 
@@ -928,7 +801,7 @@ Additional internal optimizations for the following templates special cases:
   Template only contains variables (or . )
   Template only contains variables (or . ) or patterns (literal or variable)
 
-=for html <br>
+=for html <br><br>
 
 =item Version 1.06
 
@@ -944,7 +817,7 @@ Internal optimizations for the following templates special cases:
   Template only contains variables (or . )
   Template only contains variables (or . ) or patterns (literal or variable)
 
-=for html <br>
+=for html <br><br>
 
 =item Version 1.05
 
@@ -952,7 +825,7 @@ Internal optimizations for the following templates special cases:
 
 Minor doc changes (README, mostly).
 
-=for html <br>
+=for html <br><br>
 
 =item Version 1.04
 
@@ -960,7 +833,7 @@ Minor doc changes (README, mostly).
 
 Changed name String::Parser to String::RexxParse.
 
-=for html <br>
+=for html <br><br>
 
 =item Version 1.03
 
@@ -970,7 +843,7 @@ Fixed incorrect handling of template when two or more
 patterns are next to each other, or when last template
 item is a pattern.
 
-=for html <br>
+=for html <br><br>
 
 =item Version 1.02
 
@@ -979,7 +852,7 @@ item is a pattern.
 Fixed incorrect handling of variable pattern in template when
 variable's value contains regex meta characters.
 
-=for html <br>
+=for html <br><br>
 
 =item Version 1.01
 
@@ -988,7 +861,7 @@ variable's value contains regex meta characters.
 Fixed incorrect template parsing when a pattern is the first
 template item.
 
-=for html <br>
+=for html <br><br>
 
 =item Version 1.00
 
